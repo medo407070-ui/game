@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>🎮 Catch the Ball 🎮</title>
+  <style>
+  body {
+    margin: 0;
+    font-family: "Segoe UI", sans-serif;
+    text-align: center;
+    height: 100vh;
+    overflow: hidden;
+    background: black;
+    animation: floatPage 4s ease-in-out infinite;
+  }
+
+  @keyframes floatPage {
+    0%   { transform: translateY(0); }
+    50%  { transform: translateY(-20px); }
+    100% { transform: translateY(0); }
+  }
+
+  #starsCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    background: black;
+  }
+
+  h1 {
+    margin-top: 15px;
+    font-size: 40px;
+    color: red;
+    text-shadow: 2px 2px 5px black;
+  }
+
+  #controls {
+    margin: 10px 0;
+    font-size: 16px;
+    color: white;
+  }
+
+  select {
+    font-size: 16px;
+    padding: 6px 12px;
+    border-radius: 12px;
+    border: 2px solid #00bfff;
+    background: #111;
+    color: #fff;
+    cursor: pointer;
+    transition: 0.3s;
+    outline: none;
+  }
+
+  select:hover {
+    background: #00bfff;
+    color: #111;
+    box-shadow: 0 0 8px #00bfff;
+  }
+
+  #gameCanvas {
+    border: 2px solid white;
+    display: block;
+    margin: 20px auto;
+    width: 405px;
+    height: 405px;
+    background: rgba(0,0,0,0.5);
+  }
+
+  #info {
+    text-align: center;
+    margin-top: 15px;
+    font-size: 18px;
+    color: white;
+  }
+</style>
+</head>
+<body>
+  <canvas id="starsCanvas"></canvas>
+
+  <h1>🎮 Catch the Ball 🎮</h1>
+  <div id="controls">
+    استخدم الأسهم (يمين / شمال) أو الماوس للتحريك <br><br>
+    مستوى الصعوبة:
+    <select id="difficulty">
+      <option value="easy">سهل</option>
+      <option value="medium" selected>متوسط</option>
+      <option value="hard">صعب</option>
+      <option value="extreme">أصعب جدًا</option>
+    </select>
+  </div>
+
+  <canvas id="gameCanvas" width="300" height="300"></canvas>
+
+  <div id="info">
+    ❤️❤️❤️ <br>
+    النقاط: <span id="score">0</span><br>
+    🎖️ أفضل نتيجة: <span id="highScore">0</span>
+  </div>
+
+  <script>
+    /* 🎇 خلفية النجوم */
+    const starsCanvas = document.getElementById("starsCanvas");
+    const starsCtx = starsCanvas.getContext("2d");
+    starsCanvas.width = window.innerWidth;
+    starsCanvas.height = window.innerHeight;
+
+    let stars = [];
+    const starsCount = 400;
+    for (let i=0; i<starsCount; i++) {
+      stars.push({
+        x: Math.random() * starsCanvas.width,
+        y: Math.random() * starsCanvas.height,
+        size: Math.random() * 2,
+        speed: Math.random() * 3 + 1
+      });
+    }
+
+    function drawStars() {
+      starsCtx.fillStyle = "black";
+      starsCtx.fillRect(0,0,starsCanvas.width,starsCanvas.height);
+
+      starsCtx.fillStyle = "white";
+      stars.forEach(star => {
+        starsCtx.beginPath();
+        starsCtx.arc(star.x, star.y, star.size, 0, Math.PI*2);
+        starsCtx.fill();
+
+        star.y += star.speed;
+        if (star.y > starsCanvas.height) {
+          star.y = 0;
+          star.x = Math.random() * starsCanvas.width;
+        }
+      });
+
+      requestAnimationFrame(drawStars);
+    }
+    drawStars();
+
+    window.addEventListener("resize", () => {
+      starsCanvas.width = window.innerWidth;
+      starsCanvas.height = window.innerHeight;
+    });
+  </script>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const scoreSpan = document.getElementById("score");
+    const highScoreSpan = document.getElementById("highScore");
+    const difficultySelect = document.getElementById("difficulty");
+
+    let player = { x: canvas.width/2 - 40, y: canvas.height - 20, width: 80, height: 15, speed: 6 };
+    let balls = [];
+    let explosions = [];
+    let score = 0;
+    let lives = 3;
+    let gameRunning = false;
+    let difficulty = "medium";
+
+    const ballColors = ["red","yellow","lime"];
+    const speeds = { easy: 2, medium: 4, hard: 6, extreme: 8 };
+
+    let catchSound, loseSound, boomSound, gameOverSound;
+
+    // ✅ تحميل أفضل نتيجة من المتصفح
+    let highScore = localStorage.getItem("catchBallHighScore") || 0;
+    highScoreSpan.textContent = highScore;
+
+    function resetGame() {
+      player.x = canvas.width/2 - player.width/2;
+      score = 0;
+      lives = 3;
+      balls = [];
+      explosions = [];
+      scoreSpan.textContent = score;
+      gameRunning = true;
+    }
+
+    function drawPlayer() {
+      ctx.fillStyle = "cyan";
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+    }
+
+    function drawBalls() {
+      balls.forEach(ball => {
+        if (ball.bad) {
+          ctx.font = "16px Arial";
+          ctx.fillStyle = "violet";
+          ctx.fillText("💣", ball.x - 8, ball.y + 6);
+        } else {
+          ctx.beginPath();
+          ctx.arc(ball.x, ball.y, ball.size, 0, Math.PI*2);
+          ctx.fillStyle = ball.color;
+          ctx.fill();
+        }
+      });
+    }
+
+    function drawExplosions() {
+      explosions.forEach((ex, index) => {
+        ctx.beginPath();
+        ctx.arc(ex.x, ex.y, ex.radius, 0, Math.PI*2);
+        ctx.strokeStyle = "violet";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ex.radius += 2;
+        ex.alpha -= 0.05;
+        if (ex.alpha <= 0) explosions.splice(index, 1);
+      });
+    }
+
+    function updateBalls() {
+      if (Math.random() < 0.03) {
+        let isBad = Math.random() < 0.3;
+        balls.push({
+          x: Math.random() * (canvas.width - 20) + 10,
+          y: 0,
+          size: 10,
+          speed: speeds[difficulty],
+          color: isBad ? "violet" : ballColors[Math.floor(Math.random()*ballColors.length)],
+          bad: isBad
+        });
+      }
+
+      balls.forEach((ball, i) => {
+        ball.y += ball.speed;
+
+        if (
+          ball.x > player.x &&
+          ball.x < player.x + player.width &&
+          ball.y > player.y &&
+          ball.y < player.y + player.height
+        ) {
+          if (ball.bad) {
+            lives--;
+            explosions.push({x: ball.x, y: ball.y, radius: 10, alpha: 1});
+            if (loseSound) loseSound.play();
+            if (boomSound) boomSound.play();
+          } else {
+            score++;
+            scoreSpan.textContent = score;
+
+            // ✅ تحديث أفضل نتيجة
+            if (score > highScore) {
+              highScore = score;
+              localStorage.setItem("catchBallHighScore", highScore);
+              highScoreSpan.textContent = highScore;
+            }
+
+            if (catchSound) catchSound.play();
+          }
+          balls.splice(i, 1);
+        }
+
+        if (ball.y > canvas.height) {
+          balls.splice(i, 1);
+        }
+      });
+    }
+
+    function drawLives() {
+      let hearts = "❤️".repeat(lives);
+      document.getElementById("info").innerHTML = 
+        hearts + "<br>النقاط: <span id='score'>" + score + "</span>" +
+        "<br>🎖️ أفضل نتيجة: <span id='highScore'>" + highScore + "</span>";
+    }
+
+    function gameLoop() {
+      if (!gameRunning) return;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      drawPlayer();
+      drawBalls();
+      updateBalls();
+      drawExplosions();
+      drawLives();
+
+      if (lives <= 0) {
+        gameRunning = false;
+        if (!gameOverSound) {
+          gameOverSound = new Audio("https://actions.google.com/sounds/v1/cartoon/metal_clank_and_wobble.ogg");
+          gameOverSound.play();
+        }
+        ctx.textAlign = "center";
+        ctx.fillStyle = "red";
+        ctx.font = "bold 32px Arial";
+        ctx.shadowColor = "black";
+        ctx.shadowBlur = 10;
+        ctx.fillText("Game Over", canvas.width / 2, canvas.height / 2 - 20);
+
+        ctx.fillStyle = "white";
+        ctx.font = "18px Arial";
+        ctx.shadowColor = "blue";
+        ctx.shadowBlur = 8;
+        ctx.fillText("اضغط Enter لبدء اللعبة", canvas.width / 2, canvas.height / 2 + 30);
+        return;
+      }
+      requestAnimationFrame(gameLoop);
+    }
+
+    document.addEventListener("keydown", e => {
+      if (e.key === "ArrowLeft") player.x -= player.speed;
+      if (e.key === "ArrowRight") player.x += player.speed;
+
+      if (player.x < 0) player.x = 0;
+      if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+
+      if (e.key === "Enter" && !gameRunning) {
+        catchSound = new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg");
+        loseSound = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
+        boomSound = new Audio("https://actions.google.com/sounds/v1/explosions/explosion.ogg");
+        resetGame();
+        gameLoop();
+      }
+    });
+
+    canvas.addEventListener("mousemove", e => {
+      let rect = canvas.getBoundingClientRect();
+      player.x = e.clientX - rect.left - player.width/2;
+      if (player.x < 0) player.x = 0;
+      if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+    });
+
+    difficultySelect.addEventListener("change", () => {
+      difficulty = difficultySelect.value;
+    });
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "white";
+    ctx.font = "18px Arial";
+    ctx.shadowColor = "blue";
+    ctx.shadowBlur = 8;
+    ctx.fillText("اضغط Enter لبدء اللعبة", canvas.width / 2, canvas.height / 2);
+  </script>
+</body>
+</html>
