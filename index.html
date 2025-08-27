@@ -76,10 +76,30 @@
     font-size: 18px;
     color: white;
   }
+
+ /* 📌 أماكن الإعلانات */
+.adBox {
+  position: absolute;
+  top: 150px;       /* ينزل شوية لتحت */
+  width: 200px;     /* العرض أصغر */
+  height: 400px;    /* الارتفاع أصغر */
+  background: rgba(255,255,255,0.1);
+  border: 2px dashed #00bfff;
+  color: white;
+  text-align: center;
+  line-height: 300px; /* النص في النص */
+  font-size: 14px;
+}
+#adRight { right: 0; }
+#adLeft { left: 0; }
 </style>
 </head>
 <body>
   <canvas id="starsCanvas"></canvas>
+
+  <!-- 📌 الإعلانات -->
+  <div id="adRight" class="adBox">كود الإعلان</div>
+  <div id="adLeft" class="adBox">كود الإعلان</div>
 
   <h1>🎮 Catch the Ball 🎮</h1>
   <div id="controls">
@@ -95,8 +115,9 @@
 
   <canvas id="gameCanvas" width="300" height="300"></canvas>
 
+  <!-- ✅ القلوب والسكور والهاي سكور -->
   <div id="info">
-    ❤️❤️❤️ <br>
+    <span id="hearts">❤️❤️❤️</span><br>
     النقاط: <span id="score">0</span><br>
     🎖️ أفضل نتيجة: <span id="highScore">0</span>
   </div>
@@ -151,6 +172,7 @@
     const ctx = canvas.getContext("2d");
     const scoreSpan = document.getElementById("score");
     const highScoreSpan = document.getElementById("highScore");
+    const heartsSpan = document.getElementById("hearts");
     const difficultySelect = document.getElementById("difficulty");
 
     let player = { x: canvas.width/2 - 40, y: canvas.height - 20, width: 80, height: 15, speed: 6 };
@@ -177,6 +199,7 @@
       balls = [];
       explosions = [];
       scoreSpan.textContent = score;
+      heartsSpan.textContent = "❤️".repeat(lives);
       gameRunning = true;
     }
 
@@ -237,6 +260,7 @@
         ) {
           if (ball.bad) {
             lives--;
+            heartsSpan.textContent = "❤️".repeat(lives);
             explosions.push({x: ball.x, y: ball.y, radius: 10, alpha: 1});
             if (loseSound) loseSound.play();
             if (boomSound) boomSound.play();
@@ -263,10 +287,9 @@
     }
 
     function drawLives() {
-      let hearts = "❤️".repeat(lives);
-      document.getElementById("info").innerHTML = 
-        hearts + "<br>النقاط: <span id='score'>" + score + "</span>" +
-        "<br>🎖️ أفضل نتيجة: <span id='highScore'>" + highScore + "</span>";
+      heartsSpan.textContent = "❤️".repeat(lives);
+      scoreSpan.textContent = score;
+      highScoreSpan.textContent = highScore;
     }
 
     function gameLoop() {
